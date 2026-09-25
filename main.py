@@ -12,7 +12,7 @@ import math
 TOKEN = os.environ.get('BOT_TOKEN') or os.environ.get('TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN)
 
-# خادم المنفذ المطور لدعم طلبات GET و HEAD معاً وتفادي أخطاء Render
+# خادم المنفذ للحفاظ على استقرار Render
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -32,14 +32,14 @@ def run_dummy_server():
 
 threading.Thread(target=run_dummy_server, daemon=True).start()
 
-# قائمة الأزرار التفاعلية المحدثة
+# قائمة الأزرار التفاعلية
 def main_keyboard():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn1 = types.KeyboardButton("🌐 التحليل الموحد (كل مدارس التحليل)")
     btn2 = types.KeyboardButton("🧠 مدرسة ICT والسيولة SMC")
     btn3 = types.KeyboardButton("🌊 موجات أليوت والهارمونيك")
     btn4 = types.KeyboardButton("📐 التحليل الرقمي وزوايا جان")
-    btn5 = types.KeyboardButton("🎯 القيمة العادلة وتوقعات البنوك")
+    btn5 = types.KeyboardButton("🎯 القيمة العادلة والدعم/المقاومة")
     btn6 = types.KeyboardButton("📅 التقويم وإجازات الأسواق")
     markup.add(btn1, btn2, btn3, btn4, btn5, btn6)
     return markup
@@ -50,9 +50,9 @@ def send_welcome(message):
         "📈 *أهلاً بك في محرك التحليل الشامل - أكاديمية سمو الأرقام (SMU)*\n\n"
         "تم دمج **جميع مدارس التحليل الفني والمالي العالمية** في منصة واحدة:\n"
         "• 🌊 **موجات أليوت** ونماذج **الهارمونيك** (يومي / أسبوعي)\n"
-        "• 🧠 **مدرسة ICT** وكتل الأوامر ($Order\ Blocks$) والسيولة\n"
+        "• 🧠 **مدرسة ICT** وكتل الأوامر ($Order\\ Blocks$) والسيولة\n"
         "• 📐 **التحليل الرقمي وزوايا جان** لمربع التسعة\n"
-        "• 🎯 **مناطق العرض والطلب** والقيمة العادلة وتوقعات البنوك\n"
+        "• 🎯 **مناطق العرض والطلب** والقيمة المستهدفة\n"
         "• 📊 **المدرسة الكلاسيكية** والمؤشرات الفنية\n\n"
         "💬 *أرسل رمز أي سهم مباشرة (مثال: `2222` أو `NVDA`) أو اختر من القائمة:* "
     )
@@ -77,7 +77,7 @@ def calendar_info(message):
     "🧠 مدرسة ICT والسيولة SMC", 
     "🌊 موجات أليوت والهارمونيك", 
     "📐 التحليل الرقمي وزوايا جان", 
-    "🎯 القيمة العادلة وتوقعات البنوك"
+    "🎯 القيمة العادلة والدعم/المقاومة"
 ])
 def prompt_symbol(message):
     bot.reply_to(message, "💬 اكتب رمز السهم المطلوب (مثال: `2222` أو `AAPL`):", parse_mode='Markdown')
@@ -100,12 +100,14 @@ def process_comprehensive_analysis(message):
 
     try:
         stock = yf.Ticker(ticker_symbol)
+        # جلب البيانات التاريخية المباشرة تفادياً لحظر Yahoo 401
         hist = stock.history(period="120d")
 
         if hist.empty:
             bot.reply_to(message, f"❌ تعذر جلب بيانات السهم `{symbol_input}`. تأكد من صحة الرمز.", parse_mode='Markdown')
             return
 
+        # 1. البيانات الأساسية والكلاسيكية
         close_p = round(hist['Close'].iloc[-1], 2)
         prev_close = round(hist['Close'].iloc[-2], 2) if len(hist) > 1 else close_p
         change = round(close_p - prev_close, 2)
@@ -116,30 +118,31 @@ def process_comprehensive_analysis(message):
         ema20 = round(hist['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
         ema50 = round(hist['Close'].ewm(span=50, adjust=False).mean().iloc[-1], 2)
 
+        # 2. مدرسة ICT والسيولة والعرض/الطلب (SMC)
         ob_demand = round(hist['Low'].tail(20).min(), 2)
         ob_supply = round(hist['High'].tail(20).max(), 2)
         fvg_level = round((ob_demand + close_p) / 2, 2)
 
+        # 3. موجات أليوت والهارمونيك
         wave_status = "الموجة 3 الصاعدة (امتدادية)" if close_p > ema20 > ema50 else "الموجة C (تصحيحية)"
         diff = ob_supply - ob_demand
         harmonic_0618 = round(close_p + (diff * 0.618), 2)
 
+        # 4. التحليل الرقمي وزوايا جان
         sqrt_p = math.sqrt(close_p)
         gann_90 = round((sqrt_p + 0.5)**2, 2)
         gann_180 = round((sqrt_p + 1.0)**2, 2)
 
-        try:
-            info = stock.info
-            target_price = info.get('targetMeanPrice', 'تحت التقييم')
-            recommendation = info.get('recommendationKey', 'محياد').upper()
-        except:
-            target_price = "تحت التقييم"
-            recommendation = "غير متوفر"
+        # 5. التقييم المالي الرقمي
+        pivot = round((hist['High'].iloc[-1] + hist['Low'].iloc[-1] + close_p) / 3, 2)
+        fair_value_est = round((close_p + gann_180 + pivot) / 3, 2)
 
+        # رسم الشارت
         buf = io.BytesIO()
         mpf.plot(hist.tail(40), type='candle', style='charles', savefig=buf)
         buf.seek(0)
 
+        # صياغة التتقرير الكلي الموحد
         report = (
             f"🏛️ *تقرير التحليل الشامل الموحد - أكاديمية سمو الأرقام*\n"
             f"━━━━━━━━━━━━━━━━━━\n"
@@ -161,9 +164,9 @@ def process_comprehensive_analysis(message):
             f"📐 *4. التحليل الرقمي وزوايا جان (SMU Geometry):*\n"
             f"• *زاوية 90°:* `{gann_90}` | *زاوية 180°:* `{gann_180}` {currency}\n\n"
 
-            f"🎯 *5. القيمة العادلة وتوقعات البنوك:*\n"
-            f"• *توصية بيوت الخبرة:* `{recommendation}`\n"
-            f"• *مستهدف السعر العادل:* `{target_price}` {currency}\n"
+            f"🎯 *5. النقطة المحورية والقيمة العادلة التقديرية:*\n"
+            f"• *النقطة المحورية (Pivot):* `{pivot}` {currency}\n"
+            f"• *القيمة العادلة المستهدفة:* `{fair_value_est}` {currency}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"✨ *أكاديمية سمو الأرقام لعلوم التداول*"
         )
