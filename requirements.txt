@@ -1,3 +1,5 @@
 pytelegrambotapi
-requests
 yfinance
+mplfinance
+pandas
+requests
