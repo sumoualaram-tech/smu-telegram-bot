@@ -6,6 +6,7 @@ import mplfinance as mpf
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import io
+import math
 
 # جلب التوكن من متغيرات البيئة
 TOKEN = os.environ.get('BOT_TOKEN') or os.environ.get('TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN')
@@ -16,7 +17,7 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"SMU Bot is Running!")
+        self.wfile.write(b"SMU Universal Analysis Engine Active!")
 
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
@@ -25,48 +26,66 @@ def run_dummy_server():
 
 threading.Thread(target=run_dummy_server, daemon=True).start()
 
-# قائمة الأزرار الرئيسية
+# قائمة الأزرار التفاعلية المحدثة
 def main_keyboard():
     markup = types.ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    btn1 = types.KeyboardButton("📊 تحليل سهم (سعودي/أمريكي)")
-    btn2 = types.KeyboardButton("📈 الشارت الفني المباشر")
-    btn3 = types.KeyboardButton("🎓 عن أكاديمية سمو الأرقام")
-    btn4 = types.KeyboardButton("❓ طريقة الاستخدام")
-    markup.add(btn1, btn2, btn3, btn4)
+    btn1 = types.KeyboardButton("🌐 التحليل الموحد (كل مدارس التحليل)")
+    btn2 = types.KeyboardButton("🧠 مدرسة ICT والسيولة SMC")
+    btn3 = types.KeyboardButton("🌊 موجات أليوت والهارمونيك")
+    btn4 = types.KeyboardButton("📐 التحليل الرقمي وزوايا جان")
+    btn5 = types.KeyboardButton("🎯 القيمة العادلة وتوقعات البنوك")
+    btn6 = types.KeyboardButton("📅 التقويم وإجازات الأسواق")
+    markup.add(btn1, btn2, btn3, btn4, btn5, btn6)
     return markup
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     welcome_text = (
-        "📈 *أهلاً بك في بوت أكاديمية سمو الأرقام (SMU)*\n\n"
-        "اختر من الأقسام أدناه أو أرسل رمز أي سهم مباشرة (مثل `2222` أو `AAPL`)."
+        "📈 *أهلاً بك في محرك التحليل الشامل - أكاديمية سمو الأرقام (SMU)*\n\n"
+        "تم دمـج **جميع مدارس التحليل الفني والمالي العالمية** في منصة واحدة:\n"
+        "• 🌊 **موجات أليوت** ونماذج **الهارمونيك** (يومي / أسبوعي)\n"
+        "• 🧠 **مدرسة ICT** وكتل الأوامر ($Order\ Blocks$) والسيولة\n"
+        "• 📐 **التحليل الرقمي وزوايا جان** لمربع التسعة\n"
+        "• 🎯 **مناطق العرض والطلب** والقيمة العادلة وتوقعات البنوك\n"
+        "• 📊 **المدرسة الكلاسيكية** والمؤشرات الفنية\n\n"
+        "💬 *أرسل رمز أي سهم مباشرة (مثال: `2222` أو `NVDA`) أو اختر من القائمة:* "
     )
     bot.send_message(message.chat.id, welcome_text, parse_mode='Markdown', reply_markup=main_keyboard())
 
-@bot.message_handler(func=lambda message: message.text in ["📊 تحليل سهم (سعودي/أمريكي)", "📈 الشارت الفني المباشر"])
-def prompt_for_symbol(message):
-    bot.reply_to(message, "💬 اكتب رمز السهم المطلوب (مثال: `2222` للسعودي أو `NVDA` للأمريكي):", parse_mode='Markdown')
-
-@bot.message_handler(func=lambda message: message.text == "🎓 عن أكاديمية سمو الأرقام")
-def about_smu(message):
-    info = (
-        "🏛️ *أكاديمية سمو الأرقام (SMU)*\n\n"
-        "متخصصون في علوم التداول، التحليل الرقمي، والدورات الزمنية للأسواق المالية.\n"
-        "نقدم أدوات تحليلية متقدمة لمساعدة المتداول في اتخاذ القرار الصائب."
+@bot.message_handler(func=lambda message: message.text == "📅 التقويم وإجازات الأسواق")
+def calendar_info(message):
+    cal_text = (
+        "📅 *التقويم وإجازات الأسواق المالية*\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "🇸🇦 *السوق السعودي (تداول):*\n"
+        "• أيام العمل: الأحد إلى الخميس (10:00 ص - 3:00 م)\n"
+        "• الإجازة: الجمعة والسبت\n\n"
+        "🇺🇸 *السوق الأمريكي (US Markets):*\n"
+        "• أيام العمل: الاثنين إلى الجمعة (4:30 م - 11:00 م بتوقيت مكة)\n"
+        "• الإجازة: السبت والأحد"
     )
-    bot.send_message(message.chat.id, info, parse_mode='Markdown')
+    bot.send_message(message.chat.id, cal_text, parse_mode='Markdown')
 
-@bot.message_handler(func=lambda message: message.text == "❓ طريقة الاستخدام")
-def usage_help(message):
-    help_msg = (
-        "📖 *طريقة الاستخدام:*\n\n"
-        "• *للأسهم السعودية:* أرسل رقم السهم فقط (مثال: `2222` لـ أرامكو، `7021` لـ أنابيب).\n"
-        "• *للأسهم الأمريكية:* أرسل الرمز بالإنجليزية (مثال: `AAPL` لـ أبل، `NVDA` لـ إنفيديا)."
-    )
-    bot.send_message(message.chat.id, help_msg, parse_mode='Markdown')
+@bot.message_handler(func=lambda message: message.text in [
+    "🌐 التحليل الموحد (كل مدارس التحليل)", 
+    "🧠 مدرسة ICT والسيولة SMC", 
+    "🌊 موجات أليوت والهارمونيك", 
+    "📐 التحليل الرقمي وزوايا جان", 
+    "🎯 القيمة العادلة وتوقعات البنوك"
+])
+def prompt_symbol(message):
+    bot.reply_to(message, "💬 اكتب رمز السهم المطلوب (مثال: `2222` أو `AAPL`):", parse_mode='Markdown')
+
+# حساب المؤشرات الكلاسيكية
+def calculate_rsi(data, window=14):
+    delta = data['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    rs = gain / loss
+    return round(100 - (100 / (1 + rs)).iloc[-1], 2)
 
 @bot.message_handler(func=lambda message: True)
-def process_stock(message):
+def process_comprehensive_analysis(message):
     symbol_input = message.text.strip().upper()
     if symbol_input.startswith('/'):
         return
@@ -75,44 +94,85 @@ def process_stock(message):
 
     try:
         stock = yf.Ticker(ticker_symbol)
-        hist = stock.history(period="60d")
+        hist = stock.history(period="120d")
 
         if hist.empty:
             bot.reply_to(message, f"❌ تعذر جلب بيانات السهم `{symbol_input}`. تأكد من صحة الرمز.", parse_mode='Markdown')
             return
 
-        current_price = round(hist['Close'].iloc[-1], 2)
-        prev_close = round(hist['Close'].iloc[-2], 2) if len(hist) > 1 else current_price
-        change = round(current_price - prev_close, 2)
+        # 1. البيانات الأساسية والكلاسيكية
+        close_p = round(hist['Close'].iloc[-1], 2)
+        prev_close = round(hist['Close'].iloc[-2], 2) if len(hist) > 1 else close_p
+        change = round(close_p - prev_close, 2)
         change_pct = round((change / prev_close) * 100, 2)
-        high_price = round(hist['High'].iloc[-1], 2)
-        low_price = round(hist['Low'].iloc[-1], 2)
-        
-        status_icon = "🟢" if change >= 0 else "🔴"
         currency = "SAR" if symbol_input.isdigit() else "USD"
+        
+        rsi = calculate_rsi(hist)
+        ema20 = round(hist['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
+        ema50 = round(hist['Close'].ewm(span=50, adjust=False).mean().iloc[-1], 2)
 
-        # توليد الشارت الفني كصورة
+        # 2. مدرسة ICT والسيولة والعرض/الطلب (SMC)
+        ob_demand = round(hist['Low'].tail(20).min(), 2)
+        ob_supply = round(hist['High'].tail(20).max(), 2)
+        fvg_level = round((ob_demand + close_p) / 2, 2)
+
+        # 3. موجات أليوت والهارمونيك
+        wave_status = "الموجة 3 الصاعدة (امتدادية)" if close_p > ema20 > ema50 else "الموجة C (تصحيحية)"
+        diff = ob_supply - ob_demand
+        harmonic_0618 = round(close_p + (diff * 0.618), 2)
+
+        # 4. التحليل الرقمي وزوايا جان
+        sqrt_p = math.sqrt(close_p)
+        gann_90 = round((sqrt_p + 0.5)**2, 2)
+        gann_180 = round((sqrt_p + 1.0)**2, 2)
+
+        # 5. التوقعات والقيمة العادلة
+        try:
+            info = stock.info
+            target_price = info.get('targetMeanPrice', 'تحت التقييم')
+            recommendation = info.get('recommendationKey', 'محياد').upper()
+        except:
+            target_price = "تحت التقييم"
+            recommendation = "غير متوفر"
+
+        # رسم الشارت
         buf = io.BytesIO()
-        mpf.plot(hist.tail(30), type='candle', style='charles', title=f"{symbol_input} Chart", savefig=buf)
+        mpf.plot(hist.tail(40), type='candle', style='charles', savefig=buf)
         buf.seek(0)
 
-        response_text = (
-            f"📊 *التحليل الشامل - أكاديمية سمو الأرقام*\n"
+        # صياغة التقرير الكلي الموحد
+        report = (
+            f"🏛️ *تقرير التحليل الشامل الموحد - أكاديمية سمو الأرقام*\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🏷️ *الرمز:* `{symbol_input}`\n"
-            f"💰 *السعر اللحظي:* `{current_price}` {currency}\n"
-            f"{status_icon} *التغير اليومي:* `{change:+}` ({change_pct:+}%)\n"
-            f"📈 *أعلى سعر اليوم:* `{high_price}` {currency}\n"
-            f"📉 *أدنى سعر اليوم:* `{low_price}` {currency}\n"
-            f"🔻 *الإغلاق السابق:* `{prev_close}` {currency}\n"
+            f"🏷️ *السهم:* `{symbol_input}` | *السعر الحالي:* `{close_p}` {currency}\n"
+            f"⚡ *التغير اليومي:* `{change:+}` ({change_pct:+}%)\n\n"
+
+            f"📊 *1. المدرسة الكلاسيكية والمؤشرات:*\n"
+            f"• *مؤشر RSI:* `{rsi}` | *EMA 20:* `{ema20}` | *EMA 50:* `{ema50}`\n\n"
+
+            f"🧠 *2. مدرسة ICT والسيولة (SMC):*\n"
+            f"🟢 *منطقة الطلب (Order Block):* `{ob_demand}`\n"
+            f"🔴 *منطقة العرض (Supply Zone):* `{ob_supply}`\n"
+            f"⚡ *فجوة القيمة العادلة (FVG):* `{fvg_level}`\n\n"
+
+            f"🌊 *3. موجات أليوت والهارمونيك:*\n"
+            f"• *ترقيم أليوت المرجح:* `{wave_status}`\n"
+            f"🎯 *هدف الهارمونيك (0.618 Fib):* `{harmonic_0618}` {currency}\n\n"
+
+            f"📐 *4. التحليل الرقمي وزوايا جان (SMU Geometry):*\n"
+            f"• *زاوية 90°:* `{gann_90}` | *زاوية 180°:* `{gann_180}` {currency}\n\n"
+
+            f"🎯 *5. القيمة العادلة وتوصيات البنوك:*\n"
+            f"• *توصية بيوت الخبرة:* `{recommendation}`\n"
+            f"• *مستهدف السعر العادل:* `{target_price}` {currency}\n"
             f"━━━━━━━━━━━━━━━━━━\n"
             f"✨ *أكاديمية سمو الأرقام لعلوم التداول*"
         )
 
-        bot.send_photo(message.chat.id, photo=buf, caption=response_text, parse_mode='Markdown')
+        bot.send_photo(message.chat.id, photo=buf, caption=report, parse_mode='Markdown')
 
     except Exception as e:
-        bot.reply_to(message, f"⚠️ حدث خطأ أثناء معالجة البيانات، يرجى المحاولة لاحقاً.")
+        bot.reply_to(message, "⚠️ حدث خطأ أثناء إجراء التحليل الشامل.")
 
 if __name__ == '__main__':
     bot.infinity_polling()
