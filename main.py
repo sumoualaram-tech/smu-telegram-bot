@@ -1,10 +1,27 @@
 import os
 import telebot
 import yfinance as yf
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 
 # جلب التوكن من متغيرات البيئة
 TOKEN = os.environ.get('BOT_TOKEN') or os.environ.get('TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN)
+
+# تشغيل خادم وهمي لإرضاء Render وتفادي تنبيه المنافذ
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+def run_dummy_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
+
+# تشغيل خادم المنافذ في مسار منفصل
+threading.Thread(target=run_dummy_server, daemon=True).start()
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -20,7 +37,6 @@ def send_welcome(message):
 def get_stock_info(message):
     symbol_input = message.text.strip().upper()
     
-    # تحويل الرمز المكتوب إلى صيغة Yahoo Finance للأسهم السعودية والأمريكية
     if symbol_input.isdigit():
         ticker_symbol = f"{symbol_input}.SR"
     else:
@@ -28,8 +44,6 @@ def get_stock_info(message):
 
     try:
         stock = yf.Ticker(ticker_symbol)
-        
-        # جلب أحدث بيانات السعر مباشرة عبر التاريخ اللحظي تفادياً لحظر Yahoo 401
         hist = stock.history(period="5d")
         
         if hist.empty:
