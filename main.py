@@ -1,85 +1,74 @@
 import os
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import yfinance as yf
+import requests
 
-# جلب توكن البوت
-TOKEN = os.environ.get('TOKEN') or os.environ.get('BOT_TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN')
+# جلب التوكن من متغيرات البيئة
+TOKEN = os.environ.get('BOT_TOKEN') or os.environ.get('TOKEN') or os.environ.get('TELEGRAM_BOT_TOKEN')
 bot = telebot.TeleBot(TOKEN)
 
-# 1. الترحيب عند بدء البوت
+# إعداد جلسة الطلبات لتجاوز حظر Yahoo Finance
+session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+})
+
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     welcome_text = (
-        "مرحباً بك في بوت **أكاديمية سمو الأرقام (SMU)** 📊✨\n\n"
-        "للحصول على تحليل مباشر لأي سهم، أرسل رمز السهم فقط:\n"
-        "• الأسهم السعودية: أرسل الرقم فقط (مثال: `2222` لشركة أرامكو)\n"
-        "• الأسهم الأمريكية: أرسل الرمز (مثال: `AAPL` أو `TSLA`)\n"
+        "📈 *أهلاً بك في بوت أكاديمية سمو الأرقام (SMU)*\n\n"
+        "أرسل رمز أي سهم لجلب التحليل المالي والأسعار المباشرة.\n"
+        "• للأسهم السعودية: اكتب الرقم مباشرة (مثال: `2222` أو `7021`)\n"
+        "• للأسهم الأمريكية: اكتب الرمز بالإنجليزية (مثال: `AAPL` أو `NVDA`)"
     )
-    
-    markup = InlineKeyboardMarkup()
-    btn_saudi = InlineKeyboardButton(text="🇸🇦 قناة السوق السعودي", url="https://t.me/SumouAlArqam")
-    btn_us = InlineKeyboardButton(text="🇺🇸 قناة السوق الأمريكي", url="https://t.me/SumouAlArqam")
-    btn_website = InlineKeyboardButton(text="🌐 موقع أكاديمية سمو الأرقام", url="https://sumoualarqam.com")
-    
-    markup.add(btn_saudi)
-    markup.add(btn_us)
-    markup.add(btn_website)
-    
-    bot.reply_to(message, welcome_text, parse_mode='Markdown', reply_markup=markup)
+    bot.reply_to(message, welcome_text, parse_mode='Markdown')
 
-# 2. تحليل السهم فور إرسال الرمز
 @bot.message_handler(func=lambda message: True)
-def analyze_stock(message):
-    symbol = message.text.strip().upper()
+def get_stock_info(message):
+    symbol_input = message.text.strip().upper()
     
-    # تحويل رمز السوق السعودي لإمكانية قراءته
-    if symbol.isdigit():
-        ticker_symbol = f"{symbol}.SR"
+    # تحويل الرمز المكتوب إلى صيغة Yahoo Finance
+    if symbol_input.isdigit():
+        ticker_symbol = f"{symbol_input}.SR"
     else:
-        ticker_symbol = symbol
-
-    bot.send_chat_action(message.chat.id, 'typing')
+        ticker_symbol = symbol_input
 
     try:
-        stock = yf.Ticker(ticker_symbol)
-        hist = stock.history(period="5d")
-
-        if hist.empty:
-            bot.reply_to(message, f"❌ لم يتم العثور على بيانات للرمز: **{symbol}**. تأكد من صحة الرمز.", parse_mode='Markdown')
+        # جلب البيانات عبر التيكر والجلسة المحدثة
+        stock = yf.Ticker(ticker_symbol, session=session)
+        info = stock.info
+        
+        # التأكد من وجود السعر
+        current_price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
+        
+        if not current_price:
+            bot.reply_to(message, f"❌ تعذر جلب بيانات السهم `{symbol_input}`. تأكد من صحة الرمز.", parse_mode='Markdown')
             return
 
-        latest_price = hist['Close'].iloc[-1]
-        prev_close = hist['Close'].iloc[-2] if len(hist) > 1 else latest_price
-        change = latest_price - prev_close
-        change_pct = (change / prev_close) * 100
+        company_name = info.get('longName') or info.get('shortName') or symbol_input
+        currency = info.get('currency', 'SAR' if symbol_input.isdigit() else 'USD')
+        pe_ratio = info.get('trailingPE', 'غير متوفر')
+        market_cap = info.get('marketCap', 'غير متوفر')
         
-        high = hist['High'].max()
-        low = hist['Low'].min()
-        
-        trend = "📈 صاعد" if change >= 0 else "📉 هابط"
-        
+        if isinstance(market_cap, (int, float)):
+            market_cap = f"{market_cap / 1_000_000_000:.2f}B"
+
         response_text = (
-            f"📊 **تقرير تحليل أكاديمية سمو الأرقام (SMU)**\n"
+            f"📊 *التحليل المالي - أكاديمية سمو الأرقام*\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"🔹 **الرمز:** `{symbol}`\n"
-            f"💵 **السعر الحالي:** {latest_price:.2f}\n"
-            f"📈 **التغير:** {change:+.2f} ({change_pct:+.2f}%)\n"
-            f"🧭 **الاتجاه القريب:** {trend}\n\n"
-            f"🎯 **أعلى سعر (5 أيام):** {high:.2f}\n"
-            f"🛡️ **أدنى سعر/دعم (5 أيام):** {low:.2f}\n"
+            f"🏢 *الشركة:* {company_name}\n"
+            f"🏷️ *الرمز:* `{symbol_input}`\n"
+            f"💰 *السعر اللحظي:* `{current_price}` {currency}\n"
+            f"📈 *مكرر الربحية (P/E):* `{pe_ratio}`\n"
+            f"🏛️ *القيمة السوقية:* `{market_cap}`\n"
             f"━━━━━━━━━━━━━━━━━━\n"
-            f"💡 *ملاحظة: هذا التحليل آلي بناءً على حركة السعر الأخيرة.*"
+            f"✨ *أكاديمية سمو الأرقام لعلوم التداول*"
         )
-
-        markup = InlineKeyboardMarkup()
-        btn_channel = InlineKeyboardButton(text="📢 الانضمام لقناة التحليلات", url="https://t.me/SumouAlArqam")
-        markup.add(btn_channel)
-
-        bot.reply_to(message, response_text, parse_mode='Markdown', reply_markup=markup)
+        bot.reply_to(message, response_text, parse_mode='Markdown')
 
     except Exception as e:
-        bot.reply_to(message, "⚠️ حدث خطأ أثناء جلب بيانات السهم، يرجى المحاولة لاحقاً.")
+        bot.reply_to(message, f"⚠️ حدث خطأ أثناء جلب البيانات: {str(e)}")
 
+# تشغيل البوت
 if __name__ == '__main__':
     bot.infinity_polling()
