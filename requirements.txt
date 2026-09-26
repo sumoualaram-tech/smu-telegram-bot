@@ -1,5 +1,7 @@
-pytelegrambotapi
-yfinance
-mplfinance
+python-telegram-bot[job-queue]==20.7
+Flask==3.0.0
+requests==2.31.0
+feedparser==6.0.11
+yfinance==0.2.36
+pandas-ta==0.3.14b0
 pandas
-requests
